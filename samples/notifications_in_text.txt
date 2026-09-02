@@ -1,0 +1,10 @@
+PackageName: com.example.notificationvault
+{"package_name":"com.example.notificationvault","post_time_ms":1788357008091,"title":"hello","text":"world","is_group_summary":false}
+{"package_name":"com.example.notificationvault","post_time_ms":1788357017764,"title":"hilda","text":"droid","is_group_summary":false}
+{"package_name":"com.example.notificationvault","post_time_ms":1788357048990,"title":"by","text":"allexfranc","is_group_summary":false}
+{"package_name":"com.example.notificationvault","post_time_ms":1788357017981,"title":null,"text":null,"is_group_summary":true}
+
+
+PackageName: org.telegram.messenger.web
+{"package_name":"org.telegram.messenger.web","post_time_ms":1788358122277,"title":"S*** C***","text":"42","is_group_summary":false}
+

@@ -1,0 +1,9 @@
+# Build output (generated; CMakeCache.txt leaks absolute paths)
+build/
+
+# Runtime output
+result.ndjson
+*.ndjson.tmp
+
+# macOS
+.DS_Store
