@@ -48,7 +48,7 @@ int arpoon(int target_pid, uintptr_t dl_open_address, char* payload_path){
     // 0x106 - e
     // 0x107 - \0 ---> previous stack top
     // Still, when we pass an address as the start of the string, the string is read from the lower address to the higher
-    // IMPORTANT: sp demands 16 bits alignment during function calls!!! so it needs to end in 0x0000
+    // IMPORTANT: sp demands 16 bytes alignment during function calls!!! so it needs to end in 0x0000
     regs.sp = (regs.sp - payload_path_len) & ~0xF;
 
     printf("[+] The payload path string was injected at the address %llx\n", regs.sp);
