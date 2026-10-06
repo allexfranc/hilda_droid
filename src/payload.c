@@ -16,7 +16,7 @@ jobject g_classLoaderObj;
 typedef jint (*JNI_GetCreatedJavaVMs_t)(JavaVM **, jsize, jsize *);
 
 
-void get_notif();
+void get_notif(jobject context);
 
 __attribute__((constructor)) void init_lib(void) {
     uintptr_t libart_base = find_module_base(0, "libart.so");
@@ -69,21 +69,8 @@ __attribute__((constructor)) void init_lib(void) {
         g_loadClassMethod = (*g_env)->GetMethodID(g_env, g_classLoaderClass, "loadClass",
                                                   "(Ljava/lang/String;)Ljava/lang/Class;");
 
-        get_notif();
+        get_notif(appObj);
     }
-}
-
-static jclass load_app_class(const char *dotName) {
-    jstring jname = (*g_env)->NewStringUTF(g_env, dotName);
-    jclass cls = (jclass)(*g_env)->CallObjectMethod(
-        g_env, g_classLoaderObj, g_loadClassMethod, jname);
-    (*g_env)->DeleteLocalRef(g_env, jname);
-    if ((*g_env)->ExceptionCheck(g_env)) {
-        (*g_env)->ExceptionDescribe(g_env);
-        (*g_env)->ExceptionClear(g_env);
-        return NULL;
-    }
-    return cls;
 }
 
 static void dump_extra_f(FILE *out, int idx, jobject bundle, jclass bundleClass,
@@ -123,20 +110,21 @@ static void dump_extra_f(FILE *out, int idx, jobject bundle, jclass bundleClass,
     (*g_env)->DeleteLocalRef(g_env, cs);
 }
 
-void get_notif(void) {
-    if (g_env == NULL) { LOGE("g_env nulo"); return; }
-    if (g_classLoaderObj == NULL || g_loadClassMethod == NULL) {
-        LOGE("class loader not initialized"); return;
+static jclass load_app_class(const char *dotName) {
+    jstring jname = (*g_env)->NewStringUTF(g_env, dotName);
+    jclass cls = (jclass)(*g_env)->CallObjectMethod(
+        g_env, g_classLoaderObj, g_loadClassMethod, jname);
+    (*g_env)->DeleteLocalRef(g_env, jname);
+    if ((*g_env)->ExceptionCheck(g_env)) {
+        (*g_env)->ExceptionDescribe(g_env);
+        (*g_env)->ExceptionClear(g_env);
+        return NULL;
     }
+    return cls;
+}
 
-    jclass atClass = load_app_class("android.app.ActivityThread");
-    if (atClass == NULL) { LOGE("ActivityThread did not load"); return; }
-
-    jmethodID currentApp = (*g_env)->GetStaticMethodID(g_env, atClass,
-        "currentApplication", "()Landroid/app/Application;");
-    jobject context = (*g_env)->CallStaticObjectMethod(g_env, atClass, currentApp);
-    if (context == NULL) { LOGE("currentApplication null"); return; }
-
+void get_notif(jobject context) {
+    
     // NotificationManager = context.getSystemService("notification")
     jclass ctxClass = (*g_env)->GetObjectClass(g_env, context);
     jmethodID getSvc = (*g_env)->GetMethodID(g_env, ctxClass, "getSystemService",
