@@ -1,5 +1,6 @@
 # Build output (generated; CMakeCache.txt leaks absolute paths)
 build/
+build_kt/
 
 # Runtime output
 result.ndjson

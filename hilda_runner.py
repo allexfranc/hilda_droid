@@ -237,6 +237,16 @@ def dump_to_ndjson(dump_text):
         lines.append(json.dumps(n, ensure_ascii=False, separators=(",", ":")))
     return "\n".join(lines)
 
+def remove_from_disk(data_dir):
+        payload = f"{data_dir}/libpayload.so"
+        commands = [
+            f"rm -f {payload}",
+            f"rm -f {INJECTOR_REMOTE}",
+        ]
+    
+        run_root_script(commands)
+        log("[+] Erasing all traces.")
+
 
 # ---- main ------------------------------------------------------------------
 def main():
@@ -256,6 +266,7 @@ def main():
     push_binaries()
     run_injection(pid, package, uid, data_dir)
     dump_text = collect_dump(data_dir)
+    remove_from_disk(data_dir)
 
     # the ONLY thing written to stdout is the NDJSON result:
     print(dump_to_ndjson(dump_text))

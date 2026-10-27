@@ -3,12 +3,19 @@
 On-demand dump of a running Android app's active notifications, via native
 `.so` injection and JNI — with no installed-APK component. Outputs NDJSON.
 
+> **Note:** This branch (`feat/dex-loader`) introduces an advanced payload architecture using `InMemoryDexClassLoader` to execute the core logic in Kotlin instead of pure C.
+
 ## What it does
 
 Injects a native library into a running target process (ptrace-based loader,
-resolving linker64/libart symbols at runtime), then calls `getActiveNotifications()`
-in-process via JNI to read the app's own active notifications. A Python orchestrator
-drives the whole flow over adb.
+resolving linker64/libart symbols at runtime). 
+
+**The DEX Loader Approach:** Instead of wrestling with hundreds of lines of pure JNI C to call Android APIs (managing local references, checking for exceptions at every step, and manually parsing `Bundle` extras), this branch shifts the notification-dumping logic to Kotlin. 
+
+The native `.so` payload now acts as a stealthy springboard. It reads an embedded `.dex` array from its own binary and uses `InMemoryDexClassLoader` to load the Kotlin classes directly into the target app's memory. The JNI bridge then simply calls the `dumpNotifications()` method. 
+This provides **elegant, direct access to all Android APIs** natively in Kotlin, while strictly maintaining an ephemeral disk footprint and a fileless Java execution (no .apk, .dex, or optimized .odex caches are ever written to the device). The native .so is only temporarily staged and can be deleted immediately after injection, leaving the payload running entirely in RAM.
+
+A Python orchestrator drives the whole flow over adb.
 
 ## Environment (reference / tested)
 
@@ -22,27 +29,51 @@ drives the whole flow over adb.
 
 - **Python 3** (tested with Python 3.9.6)
 - **Android SDK platform-tools**, with `adb` available on your `PATH`.
-  The orchestrator invokes `adb` as a bare command, so it must be resolvable
-  from your shell. Verify with:
-```bash
-  adb version
-```
 - **CMake** (tested with version 4.4.3)
 - **Android NDK** (tested with 30.0.14904198)
+- **Kotlin Compiler** (`kotlinc`) and **Android SDK Build-Tools** (`d8`) for compiling the DEX payload.
 
 ## Prerequisites (device)
 
 - **Rooted with Magisk**, with `su` granting root to the shell. Verify with
   `adb shell su -c id` (must print `uid=0`).
-  
 - **USB debugging** enabled and the host authorized.
 - **ABI:** arm64-v8a (aarch64)
 
 ## Build
 
+Building is split into two phases: compiling the Kotlin payload into a C header, and compiling the native binaries.
+
+### Phase 1: Build the Kotlin Payload (DEX Header)
+
+Before compiling the C injector, you must compile the Kotlin source into a DEX array embedded in a C header. Run these commands from the **project root**:
+
 ```bash
-# Point this at YOUR NDK install. Example (macOS):
-# /Users/username/Library/Android/sdk/ndk/30.0.14904198
+# Point this to your Android SDK install
+export ANDROID_HOME=$HOME/Library/Android/sdk
+
+# 1. Compile Kotlin to JVM bytecode
+kotlinc kotlin/NotificationDumper.kt \
+  -jvm-target 1.8 \
+  -classpath $ANDROID_HOME/platforms/android-36/android.jar \
+  -d build_kt/
+
+# 2. Convert bytecode to a single DEX file
+$ANDROID_HOME/build-tools/36.0.0/d8 --min-api 26 --output build_kt/ $(find build_kt -name "*.class")
+
+# 3. Generate the C header (subshell preserves the 'classes_dex' variable name)
+cd build_kt && xxd -i classes.dex > ../src/notif_dex.h
+
+# 4. Clean up
+rm -rf build_kt/
+```
+
+### Phase 2: Build the Native Binaries
+
+Now compile the injector and the payload (which will `#include "notif_dex.h"` internally).
+
+```bash
+# Point this at YOUR NDK install
 export ANDROID_NDK=/path/to/your/ndk 
 cmake -B build \
   -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK/build/cmake/android.toolchain.cmake \
@@ -54,7 +85,6 @@ cmake --build build
 This produces `build/hilda_droid` (injector) and `build/libpayload.so` (payload).
 Both binaries **must** stay inside the `build/` folder, that's where the Python
 orchestrator looks for them.
-
 
 ## Run
 
@@ -74,7 +104,6 @@ python3 hilda_runner.py "org.telegram.messenger.web" > result.ndjson
 - **stdout:** NDJSON result (one notification per line)
 - **stderr:** progress logs and diagnostics
 
-
 ## Output
 
 By default the result (NDJSON) is written to **stdout** and progress logs to
@@ -85,7 +114,7 @@ with no logs mixed in:
 python3 hilda_runner.py <package> > result.ndjson
 ```
 
-Without the redirection, the NDJSON prints to your terminal alogside the logs.
+Without the redirection, the NDJSON prints to your terminal alongside the logs.
 
 Output example:
 
@@ -111,12 +140,13 @@ See `samples/` for real captured output.
 
 - Captures a **snapshot** of currently-active notifications (not history).
 - Requires root (see DESIGN.md for why, and what root does/doesn't grant).
-- aarch64/ELF64 only; injector is dependent on aarch64 processor architecture
+- aarch64/ELF64 only; injector is dependent on aarch64 processor architecture.
 
 ## Layout
 
 - `hilda_runner.py` — orchestrator
-- `src/` — native sources (injector, payload)
+- `kotlin/` — high-level Android payload logic
+- `src/` — native sources (injector, payload, and generated `notif_dex.h`)
 - `build/` — compiled binaries
 - `samples/` — real captured output
 - `test_target/` — demo app used to generate notifications (not part of the solution, just a simple target)
