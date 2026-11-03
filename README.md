@@ -12,7 +12,7 @@ resolving linker64/libart symbols at runtime).
 
 **The DEX Loader Approach:** Instead of wrestling with hundreds of lines of pure JNI C to call Android APIs (managing local references, checking for exceptions at every step, and manually parsing `Bundle` extras), this branch shifts the notification-dumping logic to Kotlin. 
 
-The native .so payload now acts exclusively as a springboard. It carries an embedded .dex payload inside its data section (converted via xxd) and uses InMemoryDexClassLoader to instantiate the Kotlin classes directly inside the target's ART. This provides full, native access to the Android Framework API without the friction of raw JNI, while maintaining a strictly fileless JVM execution footprint. No .apk, .dex, or optimized .odex/.vdex caches are ever dropped to disk. The native .so can be unlinked immediately after injection, leaving the Kotlin payload executing entirely in memory.
+The native .so payload now acts exclusively as a springboard. It carries an embedded .dex payload inside its data section (converted via xxd) and uses InMemoryDexClassLoader to instantiate the Kotlin classes directly inside the target's ART. This provides full, native access to the Android Framework API without the friction of raw JNI, while maintaining a strictly fileless JVM execution footprint. No .apk, .dex, or optimized .odex/.vdex caches are ever dropped to disk. The native .so can be unlinked immediately after injection, leaving the Kotlin payload executing entirely in memory.3
 
 A Python orchestrator drives the whole flow over adb.
 
