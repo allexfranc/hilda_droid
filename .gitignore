@@ -7,3 +7,5 @@ result.ndjson
 
 # macOS
 .DS_Store
+
+.vscode
