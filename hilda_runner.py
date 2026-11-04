@@ -245,7 +245,7 @@ def remove_from_disk(data_dir):
         ]
     
         run_root_script(commands)
-        log("[+] Erasing all traces.")
+        log("[+] Erasing all binaries.")
 
 
 # ---- main ------------------------------------------------------------------
