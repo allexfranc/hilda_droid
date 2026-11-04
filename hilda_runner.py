@@ -241,6 +241,7 @@ def remove_from_disk(data_dir):
         payload = f"{data_dir}/libpayload.so"
         commands = [
             f"rm -f {payload}",
+            f"rm -rf {data_dir}/oat",
             f"rm -f {INJECTOR_REMOTE}",
         ]
     
