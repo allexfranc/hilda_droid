@@ -26,7 +26,7 @@ INJECTOR_LOCAL = "./build/hilda_droid"          # local path to compiled injecto
 LIB_LOCAL = "./build/libpayload.so"             # local path to compiled .so
 INJECTOR_REMOTE = f"{DEVICE_TMP}/hilda_droid"
 LIB_REMOTE = f"{DEVICE_TMP}/libpayload.so"
-DUMP_NAME = "notif_dump.txt"                     # written by the payload into <data_dir>/files/
+DUMP_NAME = "msgs_dump.txt"                     # written by the payload into <data_dir>/files/
 
 
 # ---- logging ---------------------------------------------------------------
@@ -169,28 +169,24 @@ def collect_dump(data_dir):
 # ---- parsing ---------------------------------------------------------------
 def parse_dump(dump_text):
     """
-    Parse the key=value dump into a list of notification dicts.
+    Parse the key=value dump into a list of message dicts.
 
     Line grammar (one field per line):
         dump_count=<n>
-        notif.<i>.<field>=<value>
+        msg.<i>.<field>=<value>
 
     Only the minimal fields are kept in the output:
-        package_name, post_time_ms, title, text
-    plus is_group_summary (used to identify group-summary notifications).
+        id, body
     """
-    notifs = {}   # keyed by index so lines can arrive in any order
+    messages = {}   # keyed by index so lines can arrive in any order
 
-    def get_notif(i):
-        if i not in notifs:
-            notifs[i] = {
-                "package_name": None,
-                "post_time_ms": None,
-                "title": None,
-                "text": None,
-                "is_group_summary": None,
+    def get_msg(i):
+        if i not in messages:
+            messages[i] = {
+                "id": None,
+                "body": None,
             }
-        return notifs[i]
+        return messages[i]
 
     for line in dump_text.splitlines():
         line = line.strip()
@@ -203,7 +199,7 @@ def parse_dump(dump_text):
             continue
 
         parts = key.split(".")
-        if parts[0] != "notif" or len(parts) < 3:
+        if parts[0] != "msg" or len(parts) < 3:
             continue
 
         try:
@@ -211,30 +207,27 @@ def parse_dump(dump_text):
         except ValueError:
             continue
 
-        n = get_notif(idx)
+        m = get_msg(idx)
         field = parts[2]
 
-        if field == "post_time_ms":
-            n["post_time_ms"] = int(value) if value.isdigit() else value
-        elif field == "is_group_summary":
-            n["is_group_summary"] = (value.lower() == "true")
-        elif field in ("package_name", "title", "text"):
-            n[field] = value
-        # any other field (id, extra.*, action.*) is ignored for the minimal output
+        if field == "id":
+            m["id"] = int(value) if value.isdigit() else value
+        elif field == "body":
+            m["body"] = value
 
-    # finalize: return notifications sorted by index
-    return [notifs[i] for i in sorted(notifs.keys())]
+    # finalize: return messages sorted by index
+    return [messages[i] for i in sorted(messages.keys())]
 
 
 def dump_to_ndjson(dump_text):
     """
-    Serialize parsed notifications as NDJSON (one JSON object per line).
+    Serialize parsed messages as NDJSON (one JSON object per line).
     Preferred for streams: each line is an independent, self-contained record.
     """
-    notifs = parse_dump(dump_text)
+    messages = parse_dump(dump_text)
     lines = []
-    for n in notifs:
-        lines.append(json.dumps(n, ensure_ascii=False, separators=(",", ":")))
+    for m in messages:
+        lines.append(json.dumps(m, ensure_ascii=False, separators=(",", ":")))
     return "\n".join(lines)
 
 def remove_from_disk(data_dir):

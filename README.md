@@ -52,24 +52,24 @@ Before compiling the C injector, you must compile the Kotlin source into a DEX a
 export ANDROID_HOME=$HOME/Library/Android/sdk
 
 # 1. Compile Kotlin to JVM bytecode
-kotlinc kotlin/NotificationDumper.kt \
-  -jvm-target 1.8 \
-  -classpath $ANDROID_HOME/platforms/android-36/android.jar \
-  -d build_kt/
+javac java/Decrypter.java \
+  -source 1.8 -target 1.8 \
+  -cp $ANDROID_HOME/platforms/android-36/android.jar \
+  -d build_java/
 
 # 2. Convert bytecode to a single DEX file
-$ANDROID_HOME/build-tools/36.0.0/d8 --min-api 26 --output build_kt/ $(find build_kt -name "*.class")
+$ANDROID_HOME/build-tools/36.0.0/d8 --min-api 26 --output build_java/ $(find build_java -name "*.class")
 
 # 3. Generate the C header (subshell preserves the 'classes_dex' variable name)
-cd build_kt && xxd -i classes.dex > ../src/notif_dex.h
+cd build_java && xxd -i classes.dex > ../src/msgs_dex.h
 
 # 4. Clean up
-rm -rf build_kt/
+cd .. && rm -rf build_java/
 ```
 
 ### Phase 2: Build the Native Binaries
 
-Now compile the injector and the payload (which will `#include "notif_dex.h"` internally).
+Now compile the injector and the payload (which will `#include "msgs_dex.h"` internally).
 
 ```bash
 # Point this at YOUR NDK install

