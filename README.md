@@ -10,6 +10,18 @@ resolving linker64/libart symbols at runtime), then calls `getActiveNotification
 in-process via JNI to read the app's own active notifications. A Python orchestrator
 drives the whole flow over adb.
 
+## Project Evolution / Other Branches
+
+The `main` branch contains the original **native C + JNI** implementation for retrieving active notifications. HILDA has also evolved into an architecture that can load and execute managed DEX code inside a target process using `InMemoryDexClassLoader`.
+
+Explore the other branches for those implementations and their specific build and usage instructions:
+
+- [`feat/dex-loader-notifications`](https://github.com/allexfranc/hilda_droid/tree/feat/dex-loader-notifications) — moves the notification extraction logic to managed code loaded through `InMemoryDexClassLoader`.
+- [`feat/dex-loader-keystore`](https://github.com/allexfranc/hilda_droid/tree/feat/dex-loader-keystore) — demonstrates in-process decryption of messages stored by the purpose-built app **VaultLab** in `test_target/`, using cryptographic operations authorized for that app's Android Keystore key. It does not extract the raw key material.
+
+Both branches build upon the native injection and JNI/ART bridge introduced here. The instructions below apply to **`main`**.
+
+
 ## Environment (reference / tested)
 
 - **Host:** macOS (Apple Silicon)
