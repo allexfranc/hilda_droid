@@ -3,7 +3,7 @@
 On-demand dump of a running Android app's active notifications, via native
 `.so` injection and JNI — with no installed-APK component. Outputs NDJSON.
 
-> **Note:** This branch (`feat/dex-loader`) introduces an advanced payload architecture using `InMemoryDexClassLoader` to execute the core logic in Kotlin instead of pure C.
+> **Note:** This branch (`feat/dex-loader-notifications`) introduces an advanced payload architecture using `InMemoryDexClassLoader` to execute the core logic in Kotlin instead of pure C.
 
 ## What it does
 
